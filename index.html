@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>n8n DataTable Viewer</title>
+  <style>
+    body { background: #0e0e0e; color: #fff; font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #444; padding: 6px; }
+    input { width: 100%; background: #222; border: 1px solid #555; color: #fff; padding: 4px; }
+    button { padding: 6px 10px; background:#007bff; border:none; color:#fff; cursor:pointer;}
+  </style>
+</head>
+<body>
+
+<h2>Таблица Data Table (n8n)</h2>
+
+<button onclick="addRow()">+ Добавить строку</button>
+
+<table id="table"></table>
+
+<script>
+const API_GET = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c4";
+const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c4";
+const API_ADD = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c4";
+
+async function load() {
+  const data = await (await fetch(API_GET)).json();
+  const table = document.getElementById("table");
+
+  table.innerHTML = "";
+  const headers = Object.keys(data[0]);
+
+  table.innerHTML += "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "<th></th></tr>";
+
+  data.forEach(row => {
+    let rowHTML = "<tr>";
+    headers.forEach(k => {
+      rowHTML += `<td><input data-id="${row.id}" data-field="${k}" value="${row[k]}"></td>`;
+    });
+    rowHTML += `<td><button onclick="save('${row.id}')">💾</button></td></tr>`;
+    table.innerHTML += rowHTML;
+  });
+}
+
+async function save(id) {
+  const inputs = [...document.querySelectorAll(`input[data-id='${id}']`)];
+  const body = {};
+  inputs.forEach(i => body[i.dataset.field] = i.value);
+
+  await fetch(API_UPDATE, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  load();
+}
+
+async function addRow() {
+  await fetch(API_ADD, { method: "POST" });
+  load();
+}
+
+load();
+</script>
+
+</body>
+</html>
