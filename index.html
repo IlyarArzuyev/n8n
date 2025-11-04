@@ -8,12 +8,9 @@
       background: #0e0e0e; 
       color: #fff; 
       font-family: sans-serif; 
-      padding: 0; 
       margin: 0;
     }
     .container { 
-      width: 100%;
-      max-width: 100%;
       padding: 20px;
       box-sizing: border-box;
     }
@@ -37,26 +34,22 @@
       cursor: pointer; 
       border-radius: 4px; 
       transition: background 0.3s; 
-      white-space: nowrap;
     }
     button:hover { background: #0056b3; }
     button.delete { background: #dc3545; }
     button.delete:hover { background: #c82333; }
 
-    /* Контейнер для таблицы с горизонтальной прокруткой */
     .table-container {
       width: 100%;
       overflow-x: auto;
-      overflow-y: hidden;
     }
 
     table { 
       border-collapse: collapse; 
-      width: 100%; 
-      min-width: 100%;
+      width: 100%;
       background: #1a1a1a;
       word-break: break-word; 
-      table-layout: fixed; /* равномерное распределение ширины */
+      table-layout: fixed;
     }
 
     th, td { 
@@ -65,7 +58,7 @@
       text-align: left;
       vertical-align: top;
       white-space: normal;
-      width: auto;
+      position: relative;
     }
     th { 
       background: #2d2d2d; 
@@ -75,23 +68,32 @@
       z-index: 2;
     }
 
-    /* Многострочный ввод */
+    /* Ручное изменение ширины */
+    .resizer {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      cursor: col-resize;
+      user-select: none;
+      background: transparent;
+    }
+    .resizer:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
     textarea.cell-input {
       width: 100%;
       min-height: 28px;
-      max-height: 600px;
-      box-sizing: border-box;
       background: transparent;
       border: none;
       color: #fff;
       padding: 4px;
-      border-radius: 3px;
       font: inherit;
       outline: none;
       resize: none;
       overflow: hidden;
-      white-space: pre-wrap;
-      word-break: break-word;
     }
     textarea.cell-input:focus { 
       background: #222; 
@@ -107,12 +109,10 @@
     .status.success { 
       background: #155724; 
       color: #d4edda; 
-      border: 1px solid #c3e6cb; 
     }
     .status.error { 
       background: #721c24; 
       color: #f8d7da; 
-      border: 1px solid #f5c6cb; 
     }
 
     .loading { 
@@ -138,7 +138,6 @@
 
     tr:hover { background-color: #2a2a2a; }
 
-    /* Адаптив */
     @media (max-width: 768px) {
       th, td {
         font-size: 14px;
@@ -151,16 +150,13 @@
 <body>
   <div class="container">
     <h2>Таблица Data Table (n8n)</h2>
-    
     <div class="controls">
       <button onclick="addRow()">+ Добавить строку</button>
       <button onclick="loadData()">🔄 Обновить</button>
       <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
     </div>
-    
     <div id="statusMessage" class="status"></div>
     <div id="loadingIndicator" class="loading">Загрузка данных...</div>
-    
     <div class="table-container">
       <table id="table"></table>
     </div>
@@ -170,11 +166,12 @@
 const API_BASE   = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
 const API_GET    = `${API_BASE}?action=get`;
 const API_ADD    = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
-const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
-const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_UPDATE = API_ADD;
+const API_DELETE = API_ADD;
 
 let allData = [];
 
+/* --------------------- LOAD DATA --------------------- */
 async function loadData() {
   showLoading(true);
   try {
@@ -185,13 +182,90 @@ async function loadData() {
     renderTable(data);
     showStatus('Данные успешно загружены', 'success');
   } catch (error) {
-    console.error(error);
     showStatus('Ошибка загрузки данных: ' + error.message, 'error');
   } finally {
     showLoading(false);
   }
 }
 
+/* --------------------- RENDER --------------------- */
+function renderTable(data) {
+  const table = document.getElementById("table");
+  if (!data || data.length === 0) {
+    table.innerHTML = "<tr><td colspan='100%' style='text-align:center;'>Нет данных</td></tr>";
+    return;
+  }
+
+  const headers = Object.keys(data[0]);
+  let tableHTML = "<tr>" + headers.map(h => `<th>${h}<div class='resizer'></div></th>`).join("") + "<th>Действия<div class='resizer'></div></th></tr>";
+
+  data.forEach(row => {
+    let rowHTML = "<tr>";
+    headers.forEach(k => {
+      const value = row[k] != null ? String(row[k]) : '';
+      rowHTML += `<td><textarea class="cell-input" data-id="${escapeHtml(row.id)}" data-field="${escapeHtml(k)}" oninput="autoResize(this)">${escapeHtml(value)}</textarea></td>`;
+    });
+    rowHTML += `
+      <td class="actions-cell">
+        <button onclick="saveRow('${escapeHtml(row.id)}')">💾</button>
+        <button class="delete" onclick="deleteRow('${escapeHtml(row.id)}')">🗑️</button>
+      </td>`;
+    tableHTML += rowHTML;
+  });
+  table.innerHTML = tableHTML;
+
+  document.querySelectorAll("textarea.cell-input").forEach(autoResize);
+  applyResizableColumns();
+  restoreColumnWidths();
+}
+
+/* --------------------- RESIZABLE COLUMNS --------------------- */
+function applyResizableColumns() {
+  const table = document.getElementById('table');
+  const ths = table.querySelectorAll('th');
+
+  ths.forEach((th, index) => {
+    const resizer = th.querySelector('.resizer');
+    if (!resizer) return;
+
+    let startX, startWidth;
+
+    resizer.addEventListener('mousedown', e => {
+      startX = e.pageX;
+      startWidth = th.offsetWidth;
+      document.addEventListener('mousemove', resize);
+      document.addEventListener('mouseup', stopResize);
+    });
+
+    function resize(e) {
+      const newWidth = startWidth + (e.pageX - startX);
+      th.style.width = newWidth + 'px';
+      saveColumnWidth(index, newWidth);
+    }
+
+    function stopResize() {
+      document.removeEventListener('mousemove', resize);
+      document.removeEventListener('mouseup', stopResize);
+    }
+  });
+}
+
+/* --------------------- SAVE / RESTORE WIDTHS --------------------- */
+function saveColumnWidth(index, width) {
+  const widths = JSON.parse(localStorage.getItem('tableWidths') || '{}');
+  widths[index] = width;
+  localStorage.setItem('tableWidths', JSON.stringify(widths));
+}
+
+function restoreColumnWidths() {
+  const widths = JSON.parse(localStorage.getItem('tableWidths') || '{}');
+  const ths = document.querySelectorAll('#table th');
+  Object.keys(widths).forEach(i => {
+    if (ths[i]) ths[i].style.width = widths[i] + 'px';
+  });
+}
+
+/* --------------------- HELPERS --------------------- */
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str)
@@ -199,39 +273,6 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function renderTable(data) {
-  const table = document.getElementById("table");
-  if (!data || data.length === 0) {
-    table.innerHTML = "<tr><td colspan='100%' style='text-align: center;'>Нет данных для отображения</td></tr>";
-    return;
-  }
-
-  const headers = Object.keys(data[0]);
-  let tableHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "<th>Действия</th></tr>";
-
-  data.forEach(row => {
-    let rowHTML = "<tr>";
-    headers.forEach(k => {
-      const value = row[k] != null ? String(row[k]) : '';
-      rowHTML += `
-        <td>
-          <textarea class="cell-input" data-id="${escapeHtml(row.id)}" data-field="${escapeHtml(k)}" oninput="autoResize(this)">${escapeHtml(value)}</textarea>
-        </td>`;
-    });
-    rowHTML += `
-      <td class="actions-cell">
-        <button onclick="saveRow('${escapeHtml(row.id)}')">💾</button>
-        <button class="delete" onclick="deleteRow('${escapeHtml(row.id)}')">🗑️</button>
-      </td>
-    </tr>`;
-    tableHTML += rowHTML;
-  });
-  table.innerHTML = tableHTML;
-
-  // Подгонка высоты всех textarea
-  document.querySelectorAll("textarea.cell-input").forEach(autoResize);
 }
 
 function autoResize(el) {
@@ -243,10 +284,8 @@ async function saveRow(id) {
   const inputs = [...document.querySelectorAll(`textarea[data-id='${id}']`)];
   const body = {};
   inputs.forEach(i => body[i.dataset.field] = i.value);
-
-  const isNew = !id;
-  const endpoint = isNew ? API_ADD : API_UPDATE;
-  const action = isNew ? "insert" : "update";
+  const endpoint = id ? API_UPDATE : API_ADD;
+  const action = id ? "update" : "insert";
 
   try {
     const response = await fetch(endpoint, {
@@ -254,11 +293,10 @@ async function saveRow(id) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, data: body })
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    showStatus(isNew ? 'Строка добавлена' : 'Изменения сохранены', 'success');
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    showStatus(id ? 'Изменения сохранены' : 'Строка добавлена', 'success');
     await loadData();
   } catch (error) {
-    console.error('Ошибка сохранения:', error);
     showStatus('Ошибка сохранения: ' + error.message, 'error');
   }
 }
@@ -270,43 +308,36 @@ async function addRow() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "insert", data: {} })
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
     showStatus('Новая строка добавлена', 'success');
     await loadData();
   } catch (error) {
-    console.error('Ошибка добавления строки:', error);
-    showStatus('Ошибка добавления строки: ' + error.message, 'error');
+    showStatus('Ошибка добавления: ' + error.message, 'error');
   }
 }
 
 async function deleteRow(id) {
-  if (!confirm('Вы уверены, что хотите удалить эту строку?')) return;
+  if (!confirm('Удалить строку?')) return;
   try {
     const response = await fetch(API_DELETE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete", id })
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
     showStatus('Строка удалена', 'success');
     await loadData();
   } catch (error) {
-    console.error('Ошибка удаления:', error);
     showStatus('Ошибка удаления: ' + error.message, 'error');
   }
 }
 
 function filterTable() {
   const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-  if (!searchTerm) {
-    renderTable(allData);
-    return;
-  }
-  const filteredData = allData.filter(row => {
-    return Object.values(row).some(value => 
-      String(value).toLowerCase().includes(searchTerm)
-    );
-  });
+  if (!searchTerm) { renderTable(allData); return; }
+  const filteredData = allData.filter(row => 
+    Object.values(row).some(value => String(value).toLowerCase().includes(searchTerm))
+  );
   renderTable(filteredData);
 }
 
