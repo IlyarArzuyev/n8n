@@ -23,37 +23,42 @@
       width: 100%; 
       margin-top: 20px; 
       background: #1a1a1a;
-      table-layout: auto; /* Автоматическая ширина */
+      table-layout: auto;
+      word-break: break-word; /* перенос длинных слов */
     }
     th, td { 
       border: 1px solid #444; 
       padding: 8px; 
       text-align: left;
-      vertical-align: top; /* Выравнивание текста по верхнему краю */
-      white-space: normal; /* Разрешаем перенос строк */
-      word-break: break-word; /* Переносим длинные слова */
+      vertical-align: top;
+      white-space: normal;
     }
     th { background: #2d2d2d; font-weight: bold; }
-    input { 
-      width: 100%; 
-      min-height: 24px;
+    /* textarea styled like input, but multiline */
+    textarea.cell-input {
+      width: 100%;
+      min-height: 28px;
+      max-height: 600px; /* ограничение, при необходимости изменить */
+      box-sizing: border-box;
       background: transparent;
       border: none;
       color: #fff;
       padding: 4px;
       border-radius: 3px;
-      resize: none;
       font: inherit;
       outline: none;
-      overflow: hidden; /* скрываем скролл */
+      resize: none; /* пользователь не может вручную менять размер */
+      overflow: hidden; /* прячем скролл, высота будет авто */
+      white-space: pre-wrap; /* сохраняем переносы */
+      word-break: break-word;
     }
-    input:focus { background: #222; border: 1px solid #555; }
+    textarea.cell-input:focus { background: #222; border: 1px solid #555; }
     .status { padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none; }
     .status.success { background: #155724; color: #d4edda; border: 1px solid #c3e6cb; }
     .status.error { background: #721c24; color: #f8d7da; border: 1px solid #f5c6cb; }
     .loading { text-align: center; padding: 20px; display: none; }
     .search-box { flex-grow: 1; padding: 8px; background: #222; border: 1px solid #555; color: #fff; border-radius: 4px; }
-    .actions-cell { white-space: nowrap; text-align: center; }
+    .actions-cell { white-space: nowrap; text-align: center; width: 1%; } /* небольшой фикс ширины для колонок действий */
     tr:hover { background-color: #2a2a2a; }
   </style>
 </head>
@@ -63,7 +68,7 @@
     
     <div class="controls">
       <button onclick="addRow()">+ Добавить строку</button>
-      <button onclick="loadData()">🔄 Обновить</button>
+      <button onclick="loadData()">🔄 Абновить</button>
       <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
     </div>
     
@@ -98,9 +103,17 @@ async function loadData() {
   }
 }
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function renderTable(data) {
   const table = document.getElementById("table");
-
   if (!data || data.length === 0) {
     table.innerHTML = "<tr><td colspan='100%' style='text-align: center;'>Нет данных для отображения</td></tr>";
     return;
@@ -112,38 +125,35 @@ function renderTable(data) {
   data.forEach(row => {
     let rowHTML = "<tr>";
     headers.forEach(k => {
-      const value = row[k] ? String(row[k]) : '';
+      const value = row[k] != null ? String(row[k]) : '';
       rowHTML += `
         <td>
-          <input 
-            data-id="${row.id}" 
-            data-field="${k}" 
-            value="${value.replace(/"/g, '&quot;')}" 
-            oninput="autoResize(this)"
-          >
+          <textarea class="cell-input" data-id="${escapeHtml(row.id)}" data-field="${escapeHtml(k)}" oninput="autoResize(this)">${escapeHtml(value)}</textarea>
         </td>`;
     });
     rowHTML += `
       <td class="actions-cell">
-        <button onclick="saveRow('${row.id}')">💾</button>
-        <button class="delete" onclick="deleteRow('${row.id}')">🗑️</button>
+        <button onclick="saveRow('${escapeHtml(row.id)}')">💾</button>
+        <button class="delete" onclick="deleteRow('${escapeHtml(row.id)}')">🗑️</button>
       </td>
     </tr>`;
     tableHTML += rowHTML;
   });
   table.innerHTML = tableHTML;
 
-  // подгоняем высоту всех input под контент
-  document.querySelectorAll("input").forEach(autoResize);
+  // Авто-подгонка высоты для всех textarea
+  document.querySelectorAll("textarea.cell-input").forEach(autoResize);
 }
 
-function autoResize(input) {
-  input.style.height = 'auto';
-  input.style.height = (input.scrollHeight) + 'px';
+function autoResize(el) {
+  // Подгоняем высоту по содержимому
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight) + 'px';
 }
 
 async function saveRow(id) {
-  const inputs = [...document.querySelectorAll(`input[data-id='${id}']`)];
+  // собираем значения из textarea для этой строки
+  const inputs = [...document.querySelectorAll(`textarea[data-id='${id}']`)];
   const body = {};
   inputs.forEach(i => body[i.dataset.field] = i.value);
 
@@ -157,9 +167,7 @@ async function saveRow(id) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, data: body })
     });
-    
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    
     showStatus(isNew ? 'Строка добавлена' : 'Изменения сохранены', 'success');
     await loadData();
   } catch (error) {
@@ -175,9 +183,7 @@ async function addRow() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "insert", data: {} })
     });
-    
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    
     showStatus('Новая строка добавлена', 'success');
     await loadData();
   } catch (error) {
@@ -188,16 +194,13 @@ async function addRow() {
 
 async function deleteRow(id) {
   if (!confirm('Вы уверены, что хотите удалить эту строку?')) return;
-  
   try {
     const response = await fetch(API_DELETE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete", id })
     });
-    
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    
     showStatus('Строка удалена', 'success');
     await loadData();
   } catch (error) {
