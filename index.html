@@ -193,7 +193,7 @@ async function loadData() {
 
 /* --------------------- SEND TO WEBHOOK --------------------- */
 async function sendToWebhook() {
-  if (!confirm('Отправить все данные в таблицу через вебхук?')) return;
+  if (!confirm('Отправить все данные в таблицу?')) return;
   try {
     const response = await fetch(API_SEND, {
       method: "POST",
@@ -201,7 +201,7 @@ async function sendToWebhook() {
       body: JSON.stringify(allData)
     });
     if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-    showStatus('Данные успешно отправлены в вебхук', 'success');
+    showStatus('Данные успешно отправлены в таблицу', 'success');
   } catch (error) {
     showStatus('Ошибка отправки: ' + error.message, 'error');
   }
