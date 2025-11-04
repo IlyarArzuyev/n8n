@@ -128,7 +128,7 @@
     
     <div class="controls">
       <button onclick="addRow()">+ Добавить строку</button>
-      <button onclick="loadData()">🔄 Апнавить</button>
+      <button onclick="loadData()">🔄 Опнавить</button>
       <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
     </div>
     
@@ -147,9 +147,9 @@
 const API_BASE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
 
 const API_GET = `${API_BASE}?action=get`;
-const API_UPDATE = `${API_BASE}?action=update`;
-const API_ADD = `${API_BASE}?action=add`;
-const API_DELETE = `${API_BASE}?action=delete`;
+const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_ADD = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
 
 async function loadData() {
   showLoading(true);
