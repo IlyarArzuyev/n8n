@@ -168,9 +168,9 @@
 const API_BASE   = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
 const API_GET    = `${API_BASE}?action=get`;
 const API_ADD    = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
-const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
-const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
-const API_SEND   = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_UPDATE = API_ADD;
+const API_DELETE = API_ADD;
+const API_SEND   = API_ADD;
 
 let allData = [];
 
@@ -207,7 +207,7 @@ async function sendToWebhook() {
   }
 }
 
-/* --------------------- РЕНДЕР + РАЗМЕРЫ --------------------- */
+/* --------------------- RENDER --------------------- */
 function renderTable(data) {
   const table = document.getElementById("table");
   if (!data || data.length === 0) {
@@ -238,7 +238,62 @@ function renderTable(data) {
   restoreColumnWidths();
 }
 
-/* --------------------- РУЧНОЕ ИЗМЕНЕНИЕ ШИРИНЫ --------------------- */
+/* --------------------- ADD ROW --------------------- */
+async function addRow() {
+  try {
+    const response = await fetch(API_ADD, { 
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "insert", data: {} })
+    });
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    showStatus('Новая строка добавлена', 'success');
+    await loadData();
+  } catch (error) {
+    showStatus('Ошибка добавления: ' + error.message, 'error');
+  }
+}
+
+/* --------------------- SAVE ROW --------------------- */
+async function saveRow(id) {
+  const inputs = [...document.querySelectorAll(`textarea[data-id='${id}']`)];
+  const body = {};
+  inputs.forEach(i => body[i.dataset.field] = i.value);
+  const endpoint = id ? API_UPDATE : API_ADD;
+  const action = id ? "update" : "insert";
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, data: body })
+    });
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    showStatus(id ? 'Изменения сохранены' : 'Строка добавлена', 'success');
+    await loadData();
+  } catch (error) {
+    showStatus('Ошибка сохранения: ' + error.message, 'error');
+  }
+}
+
+/* --------------------- DELETE ROW --------------------- */
+async function deleteRow(id) {
+  if (!confirm('Удалить строку?')) return;
+  try {
+    const response = await fetch(API_DELETE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id })
+    });
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    showStatus('Строка удалена', 'success');
+    await loadData();
+  } catch (error) {
+    showStatus('Ошибка удаления: ' + error.message, 'error');
+  }
+}
+
+/* --------------------- RESIZABLE COLUMNS --------------------- */
 function applyResizableColumns() {
   const table = document.getElementById('table');
   const ths = table.querySelectorAll('th');
@@ -269,7 +324,7 @@ function applyResizableColumns() {
   });
 }
 
-/* --------------------- СОХРАНЕНИЕ / ВОССТАНОВЛЕНИЕ ШИРИН --------------------- */
+/* --------------------- SAVE / RESTORE WIDTHS --------------------- */
 function saveColumnWidth(index, width) {
   const widths = JSON.parse(localStorage.getItem('tableWidths') || '{}');
   widths[index] = width;
@@ -284,7 +339,7 @@ function restoreColumnWidths() {
   });
 }
 
-/* --------------------- ПРОЧЕЕ --------------------- */
+/* --------------------- HELPERS --------------------- */
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str)
