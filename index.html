@@ -4,66 +4,298 @@
   <meta charset="UTF-8">
   <title>n8n DataTable Viewer</title>
   <style>
-    body { background: #0e0e0e; color: #fff; font-family: sans-serif; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #444; padding: 6px; }
-    input { width: 100%; background: #222; border: 1px solid #555; color: #fff; padding: 4px; }
-    button { padding: 6px 10px; background:#007bff; border:none; color:#fff; cursor:pointer;}
+    body { 
+      background: #0e0e0e; 
+      color: #fff; 
+      font-family: sans-serif; 
+      padding: 20px; 
+      margin: 0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h2 { 
+      margin-bottom: 20px; 
+      color: #007bff;
+    }
+    
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    button { 
+      padding: 8px 12px; 
+      background: #007bff; 
+      border: none; 
+      color: #fff; 
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    
+    button:hover {
+      background: #0056b3;
+    }
+    
+    button.delete {
+      background: #dc3545;
+    }
+    
+    button.delete:hover {
+      background: #c82333;
+    }
+    
+    table { 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin-top: 20px; 
+      background: #1a1a1a;
+    }
+    
+    th, td { 
+      border: 1px solid #444; 
+      padding: 8px; 
+      text-align: left;
+    }
+    
+    th {
+      background: #2d2d2d;
+      font-weight: bold;
+    }
+    
+    input { 
+      width: 100%; 
+      background: #222; 
+      border: 1px solid #555; 
+      color: #fff; 
+      padding: 6px; 
+      border-radius: 3px;
+    }
+    
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      display: none;
+    }
+    
+    .status.success {
+      background: #155724;
+      color: #d4edda;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      background: #721c24;
+      color: #f8d7da;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      display: none;
+    }
+    
+    .search-box {
+      flex-grow: 1;
+    }
+    
+    .actions-cell {
+      white-space: nowrap;
+    }
+    
+    tr:hover {
+      background-color: #2a2a2a;
+    }
   </style>
 </head>
 <body>
-
-<h2>Таблица Data Table (n8n)</h2>
-
-<button onclick="addRow()">+ Добавить строку</button>
-
-<table id="table"></table>
+  <div class="container">
+    <h2>Таблица Data Table (n8n)</h2>
+    
+    <div class="controls">
+      <button onclick="addRow()">+ Добавить строку</button>
+      <button onclick="loadData()">🔄 Обновить</button>
+      <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
+    </div>
+    
+    <div id="statusMessage" class="status"></div>
+    
+    <div id="loadingIndicator" class="loading">
+      Загрузка данных...
+    </div>
+    
+    <table id="table"></table>
+  </div>
 
 <script>
-const API_GET = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c444";
+const API_GET = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c4444";
 const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c44";
 const API_ADD = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c4";
+const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c444";
 
-async function load() {
-  const data = await (await fetch(API_GET)).json();
+let allData = [];
+
+async function loadData() {
+  showLoading(true);
+  try {
+    const response = await fetch(API_GET);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    allData = data;
+    renderTable(data);
+    showStatus('Данные успешно загружены', 'success');
+  } catch (error) {
+    console.error('Ошибка загрузки данных:', error);
+    showStatus('Ошибка загрузки данных: ' + error.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function renderTable(data) {
   const table = document.getElementById("table");
 
-  table.innerHTML = "";
-  const headers = Object.keys(data[0]);
+  if (data.length === 0) {
+    table.innerHTML = "<tr><td colspan='100%' style='text-align: center;'>Нет данных для отображения</td></tr>";
+    return;
+  }
 
-  table.innerHTML += "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "<th></th></tr>";
+  const headers = Object.keys(data[0]);
+  
+  let tableHTML = "<tr>" + 
+    headers.map(h => `<th>${h}</th>`).join("") + 
+    "<th>Действия</th></tr>";
 
   data.forEach(row => {
     let rowHTML = "<tr>";
     headers.forEach(k => {
-      rowHTML += `<td><input data-id="${row.id}" data-field="${k}" value="${row[k]}"></td>`;
+      rowHTML += `<td><input data-id="${row.id}" data-field="${k}" value="${row[k] || ''}"></td>`;
     });
-    rowHTML += `<td><button onclick="save('${row.id}')">💾</button></td></tr>`;
-    table.innerHTML += rowHTML;
+    rowHTML += `
+      <td class="actions-cell">
+        <button onclick="saveRow('${row.id}')">💾 Сохранить</button>
+        <button class="delete" onclick="deleteRow('${row.id}')">🗑️ Удалить</button>
+      </td>
+    </tr>`;
+    tableHTML += rowHTML;
   });
+  
+  table.innerHTML = tableHTML;
 }
 
-async function save(id) {
+async function saveRow(id) {
   const inputs = [...document.querySelectorAll(`input[data-id='${id}']`)];
   const body = {};
   inputs.forEach(i => body[i.dataset.field] = i.value);
 
-  await fetch(API_UPDATE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-
-  load();
+  try {
+    const response = await fetch(API_UPDATE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    showStatus('Данные успешно сохранены', 'success');
+    // Обновляем данные после сохранения
+    loadData();
+  } catch (error) {
+    console.error('Ошибка сохранения:', error);
+    showStatus('Ошибка сохранения: ' + error.message, 'error');
+  }
 }
 
 async function addRow() {
-  await fetch(API_ADD, { method: "POST" });
-  load();
+  try {
+    const response = await fetch(API_ADD, { 
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}) // Пустое тело или данные по умолчанию
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    showStatus('Новая строка добавлена', 'success');
+    loadData();
+  } catch (error) {
+    console.error('Ошибка добавления строки:', error);
+    showStatus('Ошибка добавления строки: ' + error.message, 'error');
+  }
 }
 
-load();
-</script>
+async function deleteRow(id) {
+  if (!confirm('Вы уверены, что хотите удалить эту строку?')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(API_DELETE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    showStatus('Строка удалена', 'success');
+    loadData();
+  } catch (error) {
+    console.error('Ошибка удаления:', error);
+    showStatus('Ошибка удаления: ' + error.message, 'error');
+  }
+}
 
+function filterTable() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  
+  if (!searchTerm) {
+    renderTable(allData);
+    return;
+  }
+  
+  const filteredData = allData.filter(row => {
+    return Object.values(row).some(value => 
+      String(value).toLowerCase().includes(searchTerm)
+    );
+  });
+  
+  renderTable(filteredData);
+}
+
+function showStatus(message, type) {
+  const statusEl = document.getElementById('statusMessage');
+  statusEl.textContent = message;
+  statusEl.className = `status ${type}`;
+  statusEl.style.display = 'block';
+  
+  setTimeout(() => {
+    statusEl.style.display = 'none';
+  }, 3000);
+}
+
+function showLoading(show) {
+  document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+}
+
+// Загружаем данные при открытии страницы
+loadData();
+</script>
 </body>
 </html>
