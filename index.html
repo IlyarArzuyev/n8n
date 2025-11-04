@@ -128,7 +128,7 @@
     
     <div class="controls">
       <button onclick="addRow()">+ Добавить строку</button>
-      <button onclick="loadData()">🔄 Обновить</button>
+      <button onclick="loadData()">🔄 Апнавить</button>
       <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
     </div>
     
@@ -146,27 +146,22 @@
 // Если у вас разные workflow для разных операций, то оставьте как есть
 const API_BASE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
 
-// Используем один базовый URL для всех операций
-const API_GET = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4444";
-const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44"; 
-const API_ADD = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
-const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c444";
-
-let allData = [];
+const API_GET = `${API_BASE}?action=get`;
+const API_UPDATE = `${API_BASE}?action=update`;
+const API_ADD = `${API_BASE}?action=add`;
+const API_DELETE = `${API_BASE}?action=delete`;
 
 async function loadData() {
   showLoading(true);
   try {
     const response = await fetch(API_GET);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
     const data = await response.json();
     allData = data;
     renderTable(data);
     showStatus('Данные успешно загружены', 'success');
   } catch (error) {
-    console.error('Ошибка загрузки данных:', error);
+    console.error(error);
     showStatus('Ошибка загрузки данных: ' + error.message, 'error');
   } finally {
     showLoading(false);
