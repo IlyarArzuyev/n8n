@@ -27,6 +27,7 @@
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
+      align-items: center;
     }
     
     button { 
@@ -105,6 +106,11 @@
     
     .search-box {
       flex-grow: 1;
+      padding: 8px;
+      background: #222;
+      border: 1px solid #555;
+      color: #fff;
+      border-radius: 4px;
     }
     
     .actions-cell {
@@ -136,10 +142,15 @@
   </div>
 
 <script>
-const API_GET = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4444";
-const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
-const API_ADD = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
-const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c444";
+// Проверьте эти URL - они должны быть одинаковыми для одного вебхука
+// Если у вас разные workflow для разных операций, то оставьте как есть
+const API_BASE = "https://n8n-n8n.sbifer.easypanel.host/webhook-test/6232344f-cec4-48c9-aed0-3853c03d52c4";
+
+// Используем один базовый URL для всех операций
+const API_GET = API_BASE;
+const API_UPDATE = API_BASE; 
+const API_ADD = API_BASE;
+const API_DELETE = API_BASE;
 
 let allData = [];
 
@@ -165,7 +176,7 @@ async function loadData() {
 function renderTable(data) {
   const table = document.getElementById("table");
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     table.innerHTML = "<tr><td colspan='100%' style='text-align: center;'>Нет данных для отображения</td></tr>";
     return;
   }
@@ -179,7 +190,9 @@ function renderTable(data) {
   data.forEach(row => {
     let rowHTML = "<tr>";
     headers.forEach(k => {
-      rowHTML += `<td><input data-id="${row.id}" data-field="${k}" value="${row[k] || ''}"></td>`;
+      // Экранируем значения для безопасности
+      const value = row[k] ? String(row[k]).replace(/"/g, '&quot;') : '';
+      rowHTML += `<td><input data-id="${row.id}" data-field="${k}" value="${value}"></td>`;
     });
     rowHTML += `
       <td class="actions-cell">
@@ -293,6 +306,9 @@ function showStatus(message, type) {
 function showLoading(show) {
   document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
 }
+
+// Автоматическое обновление каждые 30 секунд
+setInterval(loadData, 30000);
 
 // Загружаем данные при открытии страницы
 loadData();
