@@ -8,37 +8,78 @@
       background: #0e0e0e; 
       color: #fff; 
       font-family: sans-serif; 
-      padding: 20px; 
+      padding: 0; 
       margin: 0;
     }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h2 { margin-bottom: 20px; color: #007bff; }
-    .controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    button { padding: 8px 12px; background: #007bff; border: none; color: #fff; cursor: pointer; border-radius: 4px; transition: background 0.3s; }
+    .container { 
+      width: 100%;
+      max-width: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h2 { 
+      margin-bottom: 20px; 
+      color: #007bff; 
+      font-size: 22px;
+    }
+    .controls { 
+      margin-bottom: 20px; 
+      display: flex; 
+      gap: 10px; 
+      flex-wrap: wrap; 
+      align-items: center; 
+    }
+    button { 
+      padding: 8px 12px; 
+      background: #007bff; 
+      border: none; 
+      color: #fff; 
+      cursor: pointer; 
+      border-radius: 4px; 
+      transition: background 0.3s; 
+      white-space: nowrap;
+    }
     button:hover { background: #0056b3; }
     button.delete { background: #dc3545; }
     button.delete:hover { background: #c82333; }
+
+    /* Контейнер для таблицы с горизонтальной прокруткой */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
     table { 
       border-collapse: collapse; 
       width: 100%; 
-      margin-top: 20px; 
+      min-width: 100%;
       background: #1a1a1a;
-      table-layout: auto;
-      word-break: break-word; /* перенос длинных слов */
+      word-break: break-word; 
+      table-layout: fixed; /* равномерное распределение ширины */
     }
+
     th, td { 
       border: 1px solid #444; 
       padding: 8px; 
       text-align: left;
       vertical-align: top;
       white-space: normal;
+      width: auto;
     }
-    th { background: #2d2d2d; font-weight: bold; }
-    /* textarea styled like input, but multiline */
+    th { 
+      background: #2d2d2d; 
+      font-weight: bold; 
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    /* Многострочный ввод */
     textarea.cell-input {
       width: 100%;
       min-height: 28px;
-      max-height: 600px; /* ограничение, при необходимости изменить */
+      max-height: 600px;
       box-sizing: border-box;
       background: transparent;
       border: none;
@@ -47,19 +88,64 @@
       border-radius: 3px;
       font: inherit;
       outline: none;
-      resize: none; /* пользователь не может вручную менять размер */
-      overflow: hidden; /* прячем скролл, высота будет авто */
-      white-space: pre-wrap; /* сохраняем переносы */
+      resize: none;
+      overflow: hidden;
+      white-space: pre-wrap;
       word-break: break-word;
     }
-    textarea.cell-input:focus { background: #222; border: 1px solid #555; }
-    .status { padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none; }
-    .status.success { background: #155724; color: #d4edda; border: 1px solid #c3e6cb; }
-    .status.error { background: #721c24; color: #f8d7da; border: 1px solid #f5c6cb; }
-    .loading { text-align: center; padding: 20px; display: none; }
-    .search-box { flex-grow: 1; padding: 8px; background: #222; border: 1px solid #555; color: #fff; border-radius: 4px; }
-    .actions-cell { white-space: nowrap; text-align: center; width: 1%; } /* небольшой фикс ширины для колонок действий */
+    textarea.cell-input:focus { 
+      background: #222; 
+      border: 1px solid #555; 
+    }
+
+    .status { 
+      padding: 10px; 
+      border-radius: 4px; 
+      margin-bottom: 15px; 
+      display: none; 
+    }
+    .status.success { 
+      background: #155724; 
+      color: #d4edda; 
+      border: 1px solid #c3e6cb; 
+    }
+    .status.error { 
+      background: #721c24; 
+      color: #f8d7da; 
+      border: 1px solid #f5c6cb; 
+    }
+
+    .loading { 
+      text-align: center; 
+      padding: 20px; 
+      display: none; 
+    }
+
+    .search-box { 
+      flex-grow: 1; 
+      padding: 8px; 
+      background: #222; 
+      border: 1px solid #555; 
+      color: #fff; 
+      border-radius: 4px; 
+    }
+
+    .actions-cell { 
+      white-space: nowrap; 
+      text-align: center; 
+      width: 1%; 
+    }
+
     tr:hover { background-color: #2a2a2a; }
+
+    /* Адаптив */
+    @media (max-width: 768px) {
+      th, td {
+        font-size: 14px;
+        padding: 6px;
+      }
+      button { font-size: 14px; padding: 6px 10px; }
+    }
   </style>
 </head>
 <body>
@@ -68,13 +154,16 @@
     
     <div class="controls">
       <button onclick="addRow()">+ Добавить строку</button>
-      <button onclick="loadData()">🔄 Абновить</button>
+      <button onclick="loadData()">🔄 Обновить</button>
       <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
     </div>
     
     <div id="statusMessage" class="status"></div>
     <div id="loadingIndicator" class="loading">Загрузка данных...</div>
-    <table id="table"></table>
+    
+    <div class="table-container">
+      <table id="table"></table>
+    </div>
   </div>
 
 <script>
@@ -141,18 +230,16 @@ function renderTable(data) {
   });
   table.innerHTML = tableHTML;
 
-  // Авто-подгонка высоты для всех textarea
+  // Подгонка высоты всех textarea
   document.querySelectorAll("textarea.cell-input").forEach(autoResize);
 }
 
 function autoResize(el) {
-  // Подгоняем высоту по содержимому
   el.style.height = 'auto';
   el.style.height = (el.scrollHeight) + 'px';
 }
 
 async function saveRow(id) {
-  // собираем значения из textarea для этой строки
   const inputs = [...document.querySelectorAll(`textarea[data-id='${id}']`)];
   const body = {};
   inputs.forEach(i => body[i.dataset.field] = i.value);
@@ -235,7 +322,6 @@ function showLoading(show) {
   document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
 }
 
-// Загружаем данные при открытии страницы
 loadData();
 </script>
 </body>
