@@ -37,7 +37,7 @@
     
     <div class="controls">
       <button onclick="addRow()">+ Добавить строку</button>
-      <button onclick="loadData()">🔄 Обновить</button>
+      <button onclick="loadData()">🔄 Абновить</button>
       <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
     </div>
     
@@ -47,9 +47,11 @@
   </div>
 
 <script>
-const API_BASE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
-const API_GET = `${API_BASE}?action=get`;
-const API_WRITE = API_BASE; // один вебхук для всех операций
+const API_BASE   = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_GET    = `${API_BASE}?action=get`;
+const API_ADD    = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
 
 let allData = [];
 
@@ -103,11 +105,12 @@ async function saveRow(id) {
   const body = {};
   inputs.forEach(i => body[i.dataset.field] = i.value);
 
-  // Если нет id → это новая запись
-  const action = id ? "update" : "insert";
+  const isNew = !id;
+  const endpoint = isNew ? API_ADD : API_UPDATE;
+  const action = isNew ? "insert" : "update";
 
   try {
-    const response = await fetch(API_WRITE, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, data: body })
@@ -115,7 +118,7 @@ async function saveRow(id) {
     
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
-    showStatus(action === "insert" ? 'Строка добавлена' : 'Изменения сохранены', 'success');
+    showStatus(isNew ? 'Строка добавлена' : 'Изменения сохранены', 'success');
     await loadData();
   } catch (error) {
     console.error('Ошибка сохранения:', error);
@@ -125,7 +128,7 @@ async function saveRow(id) {
 
 async function addRow() {
   try {
-    const response = await fetch(API_WRITE, { 
+    const response = await fetch(API_ADD, { 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "insert", data: {} })
@@ -145,7 +148,7 @@ async function deleteRow(id) {
   if (!confirm('Вы уверены, что хотите удалить эту строку?')) return;
   
   try {
-    const response = await fetch(API_WRITE, {
+    const response = await fetch(API_DELETE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete", id })
