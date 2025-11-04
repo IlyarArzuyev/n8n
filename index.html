@@ -18,16 +18,42 @@
     button:hover { background: #0056b3; }
     button.delete { background: #dc3545; }
     button.delete:hover { background: #c82333; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; background: #1a1a1a; }
-    th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    table { 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin-top: 20px; 
+      background: #1a1a1a;
+      table-layout: auto; /* Автоматическая ширина */
+    }
+    th, td { 
+      border: 1px solid #444; 
+      padding: 8px; 
+      text-align: left;
+      vertical-align: top; /* Выравнивание текста по верхнему краю */
+      white-space: normal; /* Разрешаем перенос строк */
+      word-break: break-word; /* Переносим длинные слова */
+    }
     th { background: #2d2d2d; font-weight: bold; }
-    input { width: 100%; background: #222; border: 1px solid #555; color: #fff; padding: 6px; border-radius: 3px; }
+    input { 
+      width: 100%; 
+      min-height: 24px;
+      background: transparent;
+      border: none;
+      color: #fff;
+      padding: 4px;
+      border-radius: 3px;
+      resize: none;
+      font: inherit;
+      outline: none;
+      overflow: hidden; /* скрываем скролл */
+    }
+    input:focus { background: #222; border: 1px solid #555; }
     .status { padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none; }
     .status.success { background: #155724; color: #d4edda; border: 1px solid #c3e6cb; }
     .status.error { background: #721c24; color: #f8d7da; border: 1px solid #f5c6cb; }
     .loading { text-align: center; padding: 20px; display: none; }
     .search-box { flex-grow: 1; padding: 8px; background: #222; border: 1px solid #555; color: #fff; border-radius: 4px; }
-    .actions-cell { white-space: nowrap; }
+    .actions-cell { white-space: nowrap; text-align: center; }
     tr:hover { background-color: #2a2a2a; }
   </style>
 </head>
@@ -86,8 +112,16 @@ function renderTable(data) {
   data.forEach(row => {
     let rowHTML = "<tr>";
     headers.forEach(k => {
-      const value = row[k] ? String(row[k]).replace(/"/g, '&quot;') : '';
-      rowHTML += `<td><input data-id="${row.id}" data-field="${k}" value="${value}"></td>`;
+      const value = row[k] ? String(row[k]) : '';
+      rowHTML += `
+        <td>
+          <input 
+            data-id="${row.id}" 
+            data-field="${k}" 
+            value="${value.replace(/"/g, '&quot;')}" 
+            oninput="autoResize(this)"
+          >
+        </td>`;
     });
     rowHTML += `
       <td class="actions-cell">
@@ -98,6 +132,14 @@ function renderTable(data) {
     tableHTML += rowHTML;
   });
   table.innerHTML = tableHTML;
+
+  // подгоняем высоту всех input под контент
+  document.querySelectorAll("input").forEach(autoResize);
+}
+
+function autoResize(input) {
+  input.style.height = 'auto';
+  input.style.height = (input.scrollHeight) + 'px';
 }
 
 async function saveRow(id) {
