@@ -153,7 +153,7 @@
     <h2>Таблица Data Table (n8n)</h2>
     <div class="controls">
       <button onclick="addRow()">+ Добавить строку</button>
-      <button onclick="loadData()">🔄 Обновить</button>
+      <button onclick="loadData()">🔄 Обновить данные</button>
       <button class="send" onclick="sendToWebhook()">📤 В таблицу</button>
       <input type="text" id="searchInput" class="search-box" placeholder="Поиск..." onkeyup="filterTable()">
     </div>
@@ -168,8 +168,8 @@
 const API_BASE   = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c4";
 const API_GET    = `${API_BASE}?action=get`;
 const API_ADD    = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
-const API_UPDATE = API_ADD;
-const API_DELETE = API_ADD;
+const API_UPDATE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
+const API_DELETE = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
 const API_SEND   = "https://n8n-n8n.sbifer.easypanel.host/webhook/6232344f-cec4-48c9-aed0-3853c03d52c44";
 
 let allData = [];
